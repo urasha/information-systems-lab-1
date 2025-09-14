@@ -2,9 +2,11 @@
 
 !/backend/
 !/frontend/
+!/docs/
 
 !/backend/** 
 !/frontend/**
+!/docs/**
 
 !/README.md
 !/LICENSE
