@@ -4,10 +4,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import ru.urasha.studygroup.dto.StudyGroupDto;
 import ru.urasha.studygroup.models.StudyGroup;
 import ru.urasha.studygroup.repositories.StudyGroupRepository;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -48,7 +51,18 @@ public class StudyGroupService {
         group.setGroupAdmin(dto.getGroupAdmin());
 
         StudyGroup saved = repository.save(group);
-        notifier.broadcast(saved);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                Map<String, Object> payload = Map.of(
+                        "event", "created",
+                        "id", saved.getId()
+                );
+                notifier.broadcast(payload);
+            }
+        });
+
         return saved;
     }
 
@@ -68,13 +82,34 @@ public class StudyGroupService {
         g.setGroupAdmin(updated.getGroupAdmin());
 
         StudyGroup saved = repository.save(g);
-        notifier.broadcast(saved);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                Map<String, Object> payload = Map.of(
+                        "event", "updated",
+                        "id", id
+                );
+                notifier.broadcast(payload);
+            }
+        });
+
         return saved;
     }
 
     @Transactional
     public void delete(Integer id) {
         repository.deleteById(id);
-        notifier.broadcast("deleted:" + id);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                Map<String, Object> payload = Map.of(
+                        "event", "deleted",
+                        "id", id
+                );
+                notifier.broadcast(payload);
+            }
+        });
     }
 }
