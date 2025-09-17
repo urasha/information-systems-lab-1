@@ -1,5 +1,5 @@
 <script setup>
-import {ref, onMounted, onUnmounted} from 'vue';
+import {onMounted, onUnmounted, ref} from 'vue';
 import {api} from '../services/api';
 import CreateEditDialog from '../components/CreateEditDialog.vue';
 import {createWebSocket} from '../services/websocket';
@@ -152,18 +152,18 @@ function onSaved() {
 </script>
 
 <template>
-  <div>
+  <div class="container">
     <h1>Study Groups</h1>
-    <input v-model="filterName" placeholder="Filter by name..." @input="onFilterInput"/>
+    <input v-model="filterName" placeholder="Filter by name..." @input="onFilterInput" class="filter-input"/>
 
-    <table>
+    <table class="group-table">
       <thead>
       <tr>
         <th @click="sortBy('id')">ID</th>
         <th @click="sortBy('name')">Name</th>
         <th>Students Count</th>
         <th>Admin</th>
-        <th>Actions</th>
+        <th></th>
       </tr>
       </thead>
       <tbody>
@@ -173,22 +173,22 @@ function onSaved() {
         <td>{{ group.studentsCount }}</td>
         <td>{{ group.groupAdmin?.name || '—' }}</td>
         <td>
-          <button @click="editGroup(group)">Edit</button>
-          <button @click="deleteGroup(group.id)">Delete</button>
+          <div class="action-buttons">
+            <button class="edit-btn" @click="editGroup(group)">Edit</button>
+            <button class="delete-btn" @click="deleteGroup(group.id)">Delete</button>
+          </div>
         </td>
       </tr>
       </tbody>
     </table>
 
-    <div style="margin-top: 0.5rem;">
+    <div class="pagination">
       <button @click="prevPage" :disabled="page===0">Prev</button>
-      <span style="margin:0 1rem;">Page {{ page + 1 }} / {{ totalPages }}</span>
+      <span>Page {{ page + 1 }} / {{ totalPages }}</span>
       <button @click="nextPage" :disabled="page + 1 >= totalPages">Next</button>
     </div>
 
-    <div style="margin-top: 1rem;">
-      <button @click="openCreateDialog">Create New Group</button>
-    </div>
+    <button class="create-btn" @click="openCreateDialog">Create New Group</button>
 
     <CreateEditDialog
         v-if="showDialog"
@@ -198,3 +198,101 @@ function onSaved() {
     />
   </div>
 </template>
+
+<style scoped>
+.container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 1rem;
+  max-width: 900px;
+}
+
+h1 {
+  margin-bottom: 1rem;
+}
+
+.filter-input {
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  max-width: 300px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.group-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.group-table th, .group-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.group-table thead th {
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.group-table tbody tr:hover {
+  background-color: #f5faff;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: space-around;
+}
+
+button {
+  border: none;
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #1976d2;
+}
+
+.delete-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #d32f2f;
+}
+
+.create-btn {
+  background-color: #4CAF50;
+  color: white;
+  margin-top: 0.5rem;
+}
+
+.create-btn:hover {
+  background-color: #45a049;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+</style>
