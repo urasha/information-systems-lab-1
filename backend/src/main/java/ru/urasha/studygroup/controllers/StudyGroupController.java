@@ -47,12 +47,8 @@ public class StudyGroupController {
     @PutMapping("/{id}")
     public ResponseEntity<StudyGroup> update(@PathVariable Integer id,
                                              @Valid @RequestBody StudyGroupDto groupDto) {
-        try {
-            StudyGroup updated = studyGroupService.update(id, groupDto);
-            return ResponseEntity.ok(updated);
-        } catch (RuntimeException ex) {
-            return ResponseEntity.notFound().build();
-        }
+        StudyGroup updated = studyGroupService.update(id, groupDto);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
