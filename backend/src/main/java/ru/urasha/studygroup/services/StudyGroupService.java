@@ -1,35 +1,33 @@
 package ru.urasha.studygroup.services;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import ru.urasha.studygroup.dto.StudyGroupDto;
+import ru.urasha.studygroup.events.StudyGroupChangedEvent;
+import ru.urasha.studygroup.exceptions.ExceptionMessages;
+import ru.urasha.studygroup.exceptions.StudyGroupNotFoundException;
+import ru.urasha.studygroup.mappers.StudyGroupMapper;
 import ru.urasha.studygroup.models.StudyGroup;
 import ru.urasha.studygroup.repositories.StudyGroupRepository;
 
-import java.util.Map;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class StudyGroupService {
 
     private final StudyGroupRepository repository;
-    private final NotificationService notifier;
-
-    public StudyGroupService(StudyGroupRepository repository, NotificationService notifier) {
-        this.repository = repository;
-        this.notifier = notifier;
-    }
+    private final StudyGroupMapper studyGroupMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Page<StudyGroup> list(String nameContains, Pageable pageable) {
-        if (nameContains == null || nameContains.isBlank()) {
-            return repository.findAll(pageable);
-        }
-
-        return repository.findByNameContainingIgnoreCase(nameContains, pageable);
+        return nameContains == null || nameContains.isBlank()
+                ? repository.findAll(pageable)
+                : repository.findByNameContainingIgnoreCase(nameContains, pageable);
     }
 
     public Optional<StudyGroup> get(Integer id) {
@@ -38,61 +36,28 @@ public class StudyGroupService {
 
     @Transactional
     public StudyGroup create(StudyGroupDto dto) {
-        StudyGroup group = new StudyGroup();
-        group.setName(dto.getName());
-        group.setCoordinates(dto.getCoordinates());
-        group.setStudentsCount(dto.getStudentsCount());
-        group.setExpelledStudents(dto.getExpelledStudents());
-        group.setTransferredStudents(dto.getTransferredStudents());
-        group.setFormOfEducation(dto.getFormOfEducation());
-        group.setShouldBeExpelled(dto.getShouldBeExpelled());
-        group.setAverageMark(dto.getAverageMark());
-        group.setSemesterEnum(dto.getSemesterEnum());
-        group.setGroupAdmin(dto.getGroupAdmin());
-
+        StudyGroup group = studyGroupMapper.toEntity(dto);
         StudyGroup saved = repository.save(group);
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                Map<String, Object> payload = Map.of(
-                        "event", "created",
-                        "id", saved.getId()
-                );
-                notifier.broadcast(payload);
-            }
-        });
+        eventPublisher.publishEvent(
+                new StudyGroupChangedEvent(saved.getId(), StudyGroupChangedEvent.EventType.CREATED)
+        );
 
         return saved;
     }
 
     @Transactional
-    public StudyGroup update(Integer id, StudyGroup updated) {
-        StudyGroup g = repository.findById(id).orElseThrow(() -> new RuntimeException("Not found"));
+    public StudyGroup update(Integer id, StudyGroupDto updatedGroupDto) {
+        String message = String.format(ExceptionMessages.STUDENT_GROUP_NOT_FOUND.getMessage(), id);
+        StudyGroup existingGroup = repository.findById(id)
+                .orElseThrow(() -> new StudyGroupNotFoundException(message));
 
-        g.setName(updated.getName());
-        g.setAverageMark(updated.getAverageMark());
-        g.setStudentsCount(updated.getStudentsCount());
-        g.setExpelledStudents(updated.getExpelledStudents());
-        g.setTransferredStudents(updated.getTransferredStudents());
-        g.setFormOfEducation(updated.getFormOfEducation());
-        g.setShouldBeExpelled(updated.getShouldBeExpelled());
-        g.setSemesterEnum(updated.getSemesterEnum());
-        g.setCoordinates(updated.getCoordinates());
-        g.setGroupAdmin(updated.getGroupAdmin());
+        studyGroupMapper.updateEntityFromDto(updatedGroupDto, existingGroup);
+        StudyGroup saved = repository.save(existingGroup);
 
-        StudyGroup saved = repository.save(g);
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                Map<String, Object> payload = Map.of(
-                        "event", "updated",
-                        "id", id
-                );
-                notifier.broadcast(payload);
-            }
-        });
+        eventPublisher.publishEvent(
+                new StudyGroupChangedEvent(saved.getId(), StudyGroupChangedEvent.EventType.UPDATED)
+        );
 
         return saved;
     }
@@ -101,15 +66,8 @@ public class StudyGroupService {
     public void delete(Integer id) {
         repository.deleteById(id);
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                Map<String, Object> payload = Map.of(
-                        "event", "deleted",
-                        "id", id
-                );
-                notifier.broadcast(payload);
-            }
-        });
+        eventPublisher.publishEvent(
+                new StudyGroupChangedEvent(id, StudyGroupChangedEvent.EventType.DELETED)
+        );
     }
 }

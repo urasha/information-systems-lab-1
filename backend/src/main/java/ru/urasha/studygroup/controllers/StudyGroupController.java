@@ -46,7 +46,7 @@ public class StudyGroupController {
 
     @PutMapping("/{id}")
     public ResponseEntity<StudyGroup> update(@PathVariable Integer id,
-                                             @Valid @RequestBody StudyGroup group) {
+                                             @Valid @RequestBody StudyGroupDto group) {
         try {
             StudyGroup updated = service.update(id, group);
             return ResponseEntity.ok(updated);
