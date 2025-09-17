@@ -24,7 +24,7 @@ public class StudyGroupService {
     private final StudyGroupMapper studyGroupMapper;
     private final ApplicationEventPublisher eventPublisher;
 
-    public Page<StudyGroup> list(String nameContains, Pageable pageable) {
+    public Page<StudyGroup> getGroupPage(String nameContains, Pageable pageable) {
         return nameContains == null || nameContains.isBlank()
                 ? repository.findAll(pageable)
                 : repository.findByNameContainingIgnoreCase(nameContains, pageable);

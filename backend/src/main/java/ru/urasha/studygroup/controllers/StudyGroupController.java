@@ -18,7 +18,7 @@ import ru.urasha.studygroup.services.StudyGroupService;
 @RequiredArgsConstructor
 public class StudyGroupController {
 
-    private final StudyGroupService service;
+    private final StudyGroupService studyGroupService;
 
     @GetMapping
     public Page<StudyGroup> list(
@@ -28,27 +28,27 @@ public class StudyGroupController {
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(defaultValue = "true") boolean asc
     ) {
-        Sort.Direction dir = asc ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable p = PageRequest.of(page, size, Sort.by(dir, sort));
-        return service.list(nameContains, p);
+        Sort.Direction sortDirection = asc ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable groupPage = PageRequest.of(page, size, Sort.by(sortDirection, sort));
+        return studyGroupService.getGroupPage(nameContains, groupPage);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<StudyGroup> get(@PathVariable Integer id) {
-        return service.get(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return studyGroupService.get(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<StudyGroup> create(@Valid @RequestBody StudyGroupDto dto) {
-        StudyGroup saved = service.create(dto);
+    public ResponseEntity<StudyGroup> create(@Valid @RequestBody StudyGroupDto groupDto) {
+        StudyGroup saved = studyGroupService.create(groupDto);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<StudyGroup> update(@PathVariable Integer id,
-                                             @Valid @RequestBody StudyGroupDto group) {
+                                             @Valid @RequestBody StudyGroupDto groupDto) {
         try {
-            StudyGroup updated = service.update(id, group);
+            StudyGroup updated = studyGroupService.update(id, groupDto);
             return ResponseEntity.ok(updated);
         } catch (RuntimeException ex) {
             return ResponseEntity.notFound().build();
@@ -57,7 +57,7 @@ public class StudyGroupController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        service.delete(id);
+        studyGroupService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
