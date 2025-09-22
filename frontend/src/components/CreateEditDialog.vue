@@ -49,16 +49,27 @@ async function save() {
       <h2>{{ localGroup.id ? 'Edit' : 'Create' }} Group</h2>
 
       <div class="form-section">
+        <label>Group Name:</label>
         <input v-model="localGroup.name" placeholder="Group Name"/>
+
+        <label>Students Count:</label>
         <input type="number" v-model.number="localGroup.studentsCount" placeholder="Students Count"/>
+
+        <label>Expelled Students:</label>
         <input type="number" v-model.number="localGroup.expelledStudents" placeholder="Expelled Students"/>
+
+        <label>Transferred Students:</label>
         <input type="number" v-model.number="localGroup.transferredStudents" placeholder="Transferred Students"/>
+
+        <label>Should Be Expelled:</label>
         <input type="number" v-model.number="localGroup.shouldBeExpelled" placeholder="Should Be Expelled"/>
+
+        <label>Average Mark:</label>
         <input type="number" step="0.1" v-model.number="localGroup.averageMark" placeholder="Average Mark"/>
       </div>
 
       <div class="form-section">
-        <label>Semester</label>
+        <label>Semester:</label>
         <select v-model="localGroup.semesterEnum">
           <option value="SECOND">SECOND</option>
           <option value="SIXTH">SIXTH</option>
@@ -66,7 +77,7 @@ async function save() {
           <option value="EIGHTH">EIGHTH</option>
         </select>
 
-        <label>Form of Education</label>
+        <label>Form of Education:</label>
         <select v-model="localGroup.formOfEducation">
           <option :value="null">—</option>
           <option value="DISTANCE_EDUCATION">DISTANCE_EDUCATION</option>
@@ -76,20 +87,29 @@ async function save() {
       </div>
 
       <div class="form-section">
-        <h3>Coordinates</h3>
+        <h3 class="section-title">Coordinates</h3>
+        <label>X:</label>
         <input type="number" step="0.1" v-model.number="localGroup.coordinates.x" placeholder="X"/>
+
+        <label>Y:</label>
         <input type="number" v-model.number="localGroup.coordinates.y" placeholder="Y"/>
       </div>
 
       <div class="form-section">
-        <h3>Admin</h3>
+        <h3 class="section-title">Admin</h3>
+
+        <label>Admin Name:</label>
         <input v-model="localGroup.groupAdmin.name" placeholder="Admin Name"/>
+
+        <label>Eye Color:</label>
         <select v-model="localGroup.groupAdmin.eyeColor">
           <option value="BLACK">BLACK</option>
           <option value="BLUE">BLUE</option>
           <option value="WHITE">WHITE</option>
           <option value="BROWN">BROWN</option>
         </select>
+
+        <label>Hair Color:</label>
         <select v-model="localGroup.groupAdmin.hairColor">
           <option value="BLACK">BLACK</option>
           <option value="BLUE">BLUE</option>
@@ -97,9 +117,14 @@ async function save() {
           <option value="BROWN">BROWN</option>
         </select>
 
-        <h4>Admin Location</h4>
+        <h4 class="section-title">Admin Location</h4>
+        <label>X:</label>
         <input type="number" step="0.1" v-model.number="localGroup.groupAdmin.location.x" placeholder="X"/>
+
+        <label>Y:</label>
         <input type="number" v-model.number="localGroup.groupAdmin.location.y" placeholder="Y"/>
+
+        <label>Z:</label>
         <input type="number" step="0.1" v-model.number="localGroup.groupAdmin.location.z" placeholder="Z"/>
       </div>
 
@@ -134,9 +159,29 @@ async function save() {
 
 .form-section {
   margin-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  row-gap: 0.5rem;
+  column-gap: 0.5rem;
+  align-items: center;
+}
+
+.form-section .section-title {
+  grid-column: 1 / -1;
+  margin: 0.5rem 0;
+}
+
+.form-section label {
+  margin-left: 5%;
+  font-weight: 500;
+}
+
+.form-section input,
+.form-section select {
+  width: 100%;
+  padding: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 .modal-actions {
@@ -170,4 +215,5 @@ button {
   background: #d32f2f;
 }
 </style>
+
 
