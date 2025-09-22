@@ -35,7 +35,8 @@ public class StudyGroupController {
 
     @GetMapping("/{id}")
     public ResponseEntity<StudyGroup> get(@PathVariable Integer id) {
-        return studyGroupService.get(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return studyGroupService.get(id).map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping

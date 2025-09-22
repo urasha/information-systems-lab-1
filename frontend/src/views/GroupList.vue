@@ -2,6 +2,7 @@
 import {onMounted, onUnmounted, ref} from 'vue';
 import {api} from '../services/api';
 import CreateEditDialog from '../components/CreateEditDialog.vue';
+import GroupViewModal from "../components/GroupViewModal.vue";
 import {createWebSocket} from '../services/websocket';
 
 const groups = ref([]);
@@ -12,6 +13,9 @@ const sortField = ref('id');
 const sortAsc = ref(true);
 const showDialog = ref(false);
 const selectedGroup = ref(null);
+
+const showViewDialog = ref(false);
+const viewGroup = ref(null);
 
 const totalPages = ref(1);
 
@@ -99,6 +103,11 @@ async function deleteGroup(id) {
   }
 }
 
+function viewGroupDetails(group) {
+  viewGroup.value = group;
+  showViewDialog.value = true;
+}
+
 function handleWsMessage(payload) {
   if (!payload || !payload.event) return;
 
@@ -174,6 +183,7 @@ function onSaved() {
         <td>{{ group.groupAdmin?.name || '—' }}</td>
         <td>
           <div class="action-buttons">
+            <button class="view-btn" @click="viewGroupDetails(group)">View</button>
             <button class="edit-btn" @click="editGroup(group)">Edit</button>
             <button class="delete-btn" @click="deleteGroup(group.id)">Delete</button>
           </div>
@@ -195,6 +205,12 @@ function onSaved() {
         :group="selectedGroup"
         @close="closeDialog"
         @saved="onSaved"
+    />
+
+    <GroupViewModal
+        v-if="showViewDialog"
+        :group="viewGroup"
+        @close="showViewDialog = false"
     />
   </div>
 </template>
@@ -259,6 +275,14 @@ button {
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.view-btn {
+  background-color: #9c27b0;
+  color: white;
+}
+.view-btn:hover {
+  background-color: #7b1fa2;
 }
 
 .edit-btn {
