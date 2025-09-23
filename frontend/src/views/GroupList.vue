@@ -38,10 +38,7 @@ async function fetchGroups() {
     if (payload && Array.isArray(payload.content)) {
       groups.value = payload.content;
       totalPages.value = payload.totalPages ?? 1;
-
-      if (typeof payload.number === 'number') {
-        page.value = payload.number;
-      }
+      if (typeof payload.number === 'number') page.value = payload.number;
     } else if (Array.isArray(payload)) {
       groups.value = payload;
       totalPages.value = Math.ceil(groups.value.length / pageSize) || 1;
@@ -49,8 +46,6 @@ async function fetchGroups() {
       groups.value = payload.content ?? [];
       totalPages.value = payload.totalPages ?? 1;
     }
-
-    console.debug('Groups loaded', groups.value);
   } catch (err) {
     console.error('Failed to fetch groups', err);
   }
@@ -115,27 +110,18 @@ function handleWsMessage(payload) {
     case 'created':
     case 'updated':
     case 'deleted':
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
+      if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         fetchGroups();
         debounceTimer = null;
       }, 250);
       break;
-
-    default:
-      console.warn('Unknown WS event', payload);
   }
 }
 
 onMounted(() => {
   fetchGroups();
-
-  stompClient = createWebSocket((payload) => {
-    handleWsMessage(payload);
-  });
+  stompClient = createWebSocket((payload) => handleWsMessage(payload));
 });
 
 onUnmounted(() => {
@@ -170,7 +156,13 @@ function onSaved() {
       <tr>
         <th @click="sortBy('id')">ID</th>
         <th @click="sortBy('name')">Name</th>
-        <th>Students Count</th>
+        <th @click="sortBy('studentsCount')">Students</th>
+        <th @click="sortBy('expelledStudents')">Expelled</th>
+        <th @click="sortBy('transferredStudents')">Transferred</th>
+        <th @click="sortBy('shouldBeExpelled')">Debtors</th>
+        <th @click="sortBy('averageMark')">Average Mark</th>
+        <th @click="sortBy('formOfEducation')">Form</th>
+        <th @click="sortBy('semesterEnum')">Semester</th>
         <th>Admin</th>
         <th></th>
       </tr>
@@ -180,6 +172,12 @@ function onSaved() {
         <td>{{ group.id }}</td>
         <td>{{ group.name }}</td>
         <td>{{ group.studentsCount }}</td>
+        <td>{{ group.expelledStudents }}</td>
+        <td>{{ group.transferredStudents }}</td>
+        <td>{{ group.shouldBeExpelled }}</td>
+        <td>{{ group.averageMark }}</td>
+        <td>{{ group.form || '—' }}</td>
+        <td>{{ group.semesterEnum }}</td>
         <td>{{ group.groupAdmin?.name || '—' }}</td>
         <td>
           <div class="action-buttons">
@@ -219,7 +217,7 @@ function onSaved() {
 .container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 1rem;
-  max-width: 900px;
+  max-width: 1200px;
 }
 
 h1 {
@@ -240,11 +238,12 @@ h1 {
   border-collapse: collapse;
   margin-bottom: 1rem;
   background-color: #fff;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 0.9rem;
 }
 
 .group-table th, .group-table td {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   border: 1px solid #ddd;
   text-align: center;
 }
@@ -260,14 +259,15 @@ h1 {
 
 .action-buttons {
   display: flex;
-  justify-content: space-around;
+  gap: 0.25rem;
+  justify-content: center;
 }
 
 button {
   border: none;
   border-radius: 4px;
   padding: 0.35rem 0.75rem;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
@@ -281,6 +281,7 @@ button:disabled {
   background-color: #9c27b0;
   color: white;
 }
+
 .view-btn:hover {
   background-color: #7b1fa2;
 }
