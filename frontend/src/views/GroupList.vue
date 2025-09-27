@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted, onUnmounted, ref} from 'vue';
+import {computed, onMounted, onUnmounted, ref} from 'vue';
 import {api} from '../services/api';
 import CreateEditDialog from '../components/CreateEditDialog.vue';
 import GroupViewModal from "../components/GroupViewModal.vue";
@@ -8,7 +8,6 @@ import {createWebSocket} from '../services/websocket';
 const groups = ref([]);
 const page = ref(0);
 const pageSize = 10;
-const filterName = ref('');
 const sortField = ref('id');
 const sortAsc = ref(true);
 const showDialog = ref(false);
@@ -16,8 +15,29 @@ const selectedGroup = ref(null);
 
 const showViewDialog = ref(false);
 const viewGroup = ref(null);
-
 const totalPages = ref(1);
+
+const popupVisible = ref(false);
+const popupCol = ref(null);
+const popupX = ref(0);
+const popupY = ref(0);
+
+const filters = ref({
+  id: '',
+  name: '',
+  studentsCount: '',
+  expelledStudents: '',
+  transferredStudents: '',
+  shouldBeExpelled: '',
+  averageMark: '',
+  formOfEducation: '',
+  semesterEnum: '',
+  groupAdmin: ''
+});
+
+const activeFilter = ref(null); 
+
+const columns = ['id', 'name', 'studentsCount', 'expelledStudents', 'transferredStudents', 'shouldBeExpelled', 'averageMark', 'formOfEducation', 'semesterEnum', 'groupAdmin'];
 
 let stompClient = null;
 let debounceTimer = null;
@@ -28,12 +48,10 @@ async function fetchGroups() {
       params: {
         page: page.value,
         size: pageSize,
-        nameContains: filterName.value || undefined,
         sort: sortField.value,
         asc: sortAsc.value
       }
     });
-
     const payload = res.data;
     if (payload && Array.isArray(payload.content)) {
       groups.value = payload.content;
@@ -88,6 +106,11 @@ function closeDialog() {
   showDialog.value = false;
 }
 
+function viewGroupDetails(group) {
+  viewGroup.value = group;
+  showViewDialog.value = true;
+}
+
 async function deleteGroup(id) {
   try {
     await api.delete(`/groups/${id}`);
@@ -98,77 +121,97 @@ async function deleteGroup(id) {
   }
 }
 
-function viewGroupDetails(group) {
-  viewGroup.value = group;
-  showViewDialog.value = true;
-}
-
 function handleWsMessage(payload) {
   if (!payload || !payload.event) return;
-
-  switch (payload.event) {
-    case 'created':
-    case 'updated':
-    case 'deleted':
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        fetchGroups();
-        debounceTimer = null;
-      }, 250);
-      break;
+  if (['created', 'updated', 'deleted'].includes(payload.event)) {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      fetchGroups();
+      debounceTimer = null;
+    }, 250);
   }
 }
 
 onMounted(() => {
   fetchGroups();
-  stompClient = createWebSocket((payload) => handleWsMessage(payload));
+  stompClient = createWebSocket(handleWsMessage);
 });
 
 onUnmounted(() => {
-  if (stompClient && typeof stompClient.deactivate === 'function') {
-    stompClient.deactivate();
-    stompClient = null;
-  }
+  if (stompClient?.deactivate) stompClient.deactivate();
 });
 
-function onFilterInput() {
-  if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    page.value = 0;
-    fetchGroups();
-    debounceTimer = null;
-  }, 300);
-}
+const filteredGroups = computed(() => {
+  return groups.value.filter(g => {
+    return Object.entries(filters.value).every(([col, val]) => {
+      if (!val) return true;
+      let field = g[col];
+      if (col === 'groupAdmin') field = g.groupAdmin?.name || '';
+      if (field === null || field === undefined) field = '';
+      return String(field).toLowerCase().includes(val.toLowerCase());
+    });
+  });
+});
 
 function onSaved() {
   showDialog.value = false;
   fetchGroups();
+}
+
+function toggleFilter(col, event) {
+  if (popupVisible.value && popupCol.value === col) {
+    popupVisible.value = false;
+    popupCol.value = null;
+  } else {
+    popupCol.value = col;
+    const rect = event.target.getBoundingClientRect();
+    popupX.value = rect.right + window.scrollX;
+    popupY.value = rect.bottom + window.scrollY;
+    popupVisible.value = true;
+  }
 }
 </script>
 
 <template>
   <div class="container">
     <h1>Study Groups</h1>
-    <input v-model="filterName" placeholder="Filter by name..." @input="onFilterInput" class="filter-input"/>
+
+    <div
+        v-if="popupVisible"
+        class="filter-popup"
+        :style="{ top: popupY + 'px', left: popupX + 'px' }"
+    >
+      <input
+          v-model="filters[popupCol]"
+          placeholder="Type to filter..."
+          class="filter-input"
+      />
+    </div>
 
     <table class="group-table">
       <thead>
       <tr>
-        <th @click="sortBy('id')">ID</th>
-        <th @click="sortBy('name')">Name</th>
-        <th @click="sortBy('studentsCount')">Students</th>
-        <th @click="sortBy('expelledStudents')">Expelled</th>
-        <th @click="sortBy('transferredStudents')">Transferred</th>
-        <th @click="sortBy('shouldBeExpelled')">Debtors</th>
-        <th @click="sortBy('averageMark')">Average Mark</th>
-        <th @click="sortBy('formOfEducation')">Form</th>
-        <th @click="sortBy('semesterEnum')">Semester</th>
-        <th>Admin</th>
+        <th v-for="col in columns" :key="col" @click="sortBy(col)">
+          {{ col }}
+          <button
+              class="filter-btn"
+              @click.stop="toggleFilter(col, $event)"
+          >🔍</button>
+        </th>
+        <th>Actions</th>
+      </tr>
+      <tr v-if="activeFilter">
+        <th v-for="col in columns" :key="col">
+          <input v-if="activeFilter === col"
+                 v-model="filters[col]"
+                 placeholder="Type to filter..."
+                 class="filter-input">
+        </th>
         <th></th>
       </tr>
       </thead>
       <tbody>
-      <tr v-for="group in groups" :key="group.id">
+      <tr v-for="group in filteredGroups" :key="group.id">
         <td>{{ group.id }}</td>
         <td>{{ group.name }}</td>
         <td>{{ group.studentsCount }}</td>
@@ -176,7 +219,7 @@ function onSaved() {
         <td>{{ group.transferredStudents }}</td>
         <td>{{ group.shouldBeExpelled }}</td>
         <td>{{ group.averageMark }}</td>
-        <td>{{ group.form || '—' }}</td>
+        <td>{{ group.formOfEducation || '—' }}</td>
         <td>{{ group.semesterEnum }}</td>
         <td>{{ group.groupAdmin?.name || '—' }}</td>
         <td>
@@ -224,15 +267,6 @@ h1 {
   margin-bottom: 1rem;
 }
 
-.filter-input {
-  padding: 0.5rem;
-  margin-bottom: 1rem;
-  width: 100%;
-  max-width: 300px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
 .group-table {
   width: 100%;
   border-collapse: collapse;
@@ -251,10 +285,36 @@ h1 {
 .group-table thead th {
   background-color: #f0f0f0;
   cursor: pointer;
+  position: relative;
 }
 
 .group-table tbody tr:hover {
   background-color: #f5faff;
+}
+
+.filter-btn {
+  margin-left: 0.3rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.filter-popup {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 0.3rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 0.25rem;
+  font-size: 0.85rem;
+  border: 1px solid #aaa;
+  border-radius: 3px;
 }
 
 .action-buttons {
