@@ -1,6 +1,7 @@
 package ru.urasha.studygroup.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,6 +24,7 @@ public class StudyGroup {
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "coordinates_id")
     @NotNull
+    @Valid
     private Coordinates coordinates;
 
     @NotNull
@@ -54,6 +56,7 @@ public class StudyGroup {
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "group_admin_id")
     @NotNull
+    @Valid
     private Person groupAdmin;
 
     @PrePersist

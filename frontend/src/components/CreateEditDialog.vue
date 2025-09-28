@@ -38,7 +38,7 @@ async function save() {
     emit('close');
   } catch (err) {
     console.error(err);
-    alert('Ошибка при сохранении группы: ' + err.response?.data?.message || err.message);
+    alert('Group creation error: ' + err.response?.data?.message || err.message);
   }
 }
 </script>

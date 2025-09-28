@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.urasha.studygroup.controllers.SpecialOpsController;
-import ru.urasha.studygroup.dto.ErrorResponseDto;
+import ru.urasha.studygroup.dto.DefaultErrorResponseDto;
 import ru.urasha.studygroup.exceptions.SameSourceAndTargetGroupException;
 import ru.urasha.studygroup.exceptions.StudyGroupNotFoundException;
 
@@ -18,16 +18,16 @@ import java.time.LocalDateTime;
 public class SpecialOpsExceptionHandler {
 
     @ExceptionHandler(SameSourceAndTargetGroupException.class)
-    public ResponseEntity<ErrorResponseDto> handleSameSourceTarget(SameSourceAndTargetGroupException exception) {
-        ErrorResponseDto body = new ErrorResponseDto(
+    public ResponseEntity<DefaultErrorResponseDto> handleSameSourceTarget(SameSourceAndTargetGroupException exception) {
+        DefaultErrorResponseDto body = new DefaultErrorResponseDto(
                 LocalDateTime.now(),
                 exception.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(StudyGroupNotFoundException.class)
-    public ResponseEntity<ErrorResponseDto> handleNotFound(StudyGroupNotFoundException exception) {
-        ErrorResponseDto body = new ErrorResponseDto(
+    public ResponseEntity<DefaultErrorResponseDto> handleNotFound(StudyGroupNotFoundException exception) {
+        DefaultErrorResponseDto body = new DefaultErrorResponseDto(
                 LocalDateTime.now(),
                 exception.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
