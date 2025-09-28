@@ -8,5 +8,10 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  messages:
+    basename: messages
+  web:
+    locale: en
+    locale-resolver: fixed
 server:
   port: 8080

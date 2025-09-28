@@ -23,12 +23,15 @@ const localGroup = ref({
   }
 });
 
+const fieldErrors = ref({});
+
 watch(() => props.group, g => {
   if (g) localGroup.value = {...localGroup.value, ...g};
 }, {immediate: true});
 
 async function save() {
   try {
+    fieldErrors.value = {};
     if (localGroup.value.id) {
       await api.put(`/groups/${localGroup.value.id}`, localGroup.value);
     } else {
@@ -38,7 +41,12 @@ async function save() {
     emit('close');
   } catch (err) {
     console.error(err);
-    alert('Group creation error: ' + err.response?.data?.message || err.message);
+
+    if (err.response?.status === 400 && err.response?.data?.fieldErrors) {
+      fieldErrors.value = err.response.data.fieldErrors;
+    } else {
+      alert('Group save error: ' + (err.response?.data?.message || err.message));
+    }
   }
 }
 </script>
@@ -51,21 +59,27 @@ async function save() {
       <div class="form-section">
         <label>Group Name:</label>
         <input v-model="localGroup.name" placeholder="Group Name"/>
+        <span class="error" v-if="fieldErrors.name">{{ fieldErrors.name }}</span>
 
         <label>Students Count:</label>
         <input type="number" v-model.number="localGroup.studentsCount" placeholder="Students Count"/>
+        <span class="error" v-if="fieldErrors.studentsCount">{{ fieldErrors.studentsCount }}</span>
 
         <label>Expelled Students:</label>
         <input type="number" v-model.number="localGroup.expelledStudents" placeholder="Expelled Students"/>
+        <span class="error" v-if="fieldErrors.expelledStudents">{{ fieldErrors.expelledStudents }}</span>
 
         <label>Transferred Students:</label>
         <input type="number" v-model.number="localGroup.transferredStudents" placeholder="Transferred Students"/>
+        <span class="error" v-if="fieldErrors.transferredStudents">{{ fieldErrors.transferredStudents }}</span>
 
         <label>Should Be Expelled:</label>
         <input type="number" v-model.number="localGroup.shouldBeExpelled" placeholder="Should Be Expelled"/>
+        <span class="error" v-if="fieldErrors.shouldBeExpelled">{{ fieldErrors.shouldBeExpelled }}</span>
 
         <label>Average Mark:</label>
         <input type="number" step="0.1" v-model.number="localGroup.averageMark" placeholder="Average Mark"/>
+        <span class="error" v-if="fieldErrors.averageMark">{{ fieldErrors.averageMark }}</span>
       </div>
 
       <div class="form-section">
@@ -100,6 +114,7 @@ async function save() {
 
         <label>Admin Name:</label>
         <input v-model="localGroup.groupAdmin.name" placeholder="Admin Name"/>
+        <span class="error" v-if="fieldErrors['groupAdmin.name']">{{ fieldErrors['groupAdmin.name'] }}</span>
 
         <label>Eye Color:</label>
         <select v-model="localGroup.groupAdmin.eyeColor">
@@ -213,6 +228,12 @@ button {
 
 .cancel-btn:hover {
   background: #d32f2f;
+}
+
+.error {
+  color: red;
+  font-size: 0.8rem;
+  grid-column: 2 / 3;
 }
 </style>
 
