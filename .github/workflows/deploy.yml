@@ -74,20 +74,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend_jar
-          path: dist
+          path: backend
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
         with:
           name: frontend_dist
-          path: dist-frontend
+          path: frontend
 
       - name: Show artifacts (debug)
         run: |
           echo "Backend artifact:"
-          ls -la dist || true
+          ls -la backend || true
           echo "Frontend artifact:"
-          ls -la dist-frontend || true
+          ls -la frontend || true
 
       - name: Upload backend jar to server
         uses: appleboy/scp-action@v0.1.7
@@ -96,7 +96,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          source: "dist/*.jar"
+          source: "backend/*.jar"
           target: "${{ secrets.DEPLOY_PATH }}/backend/upload"
 
       - name: Upload frontend dist to server
@@ -106,7 +106,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          source: "dist-frontend/**"
+          source: "frontend/*"
           target: "${{ secrets.DEPLOY_PATH }}/frontend/upload"
 
       - name: Run deploy script on server
