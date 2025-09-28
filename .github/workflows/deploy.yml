@@ -21,18 +21,25 @@ jobs:
         uses: actions/checkout@v3
 
       # Backend
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Build and Test Backend
+      - name: Build Backend (skip tests)
         working-directory: ./backend
-        run: mvn clean verify -DskipTests
+        run: mvn -B clean package -DskipTests
+
+      - name: Upload backend artifact
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-jar
+          path: backend/target/*.jar
 
       # Frontend
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v3
         with:
           node-version: 22
@@ -41,25 +48,46 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-#      - name: Lint frontend
-#        working-directory: ./frontend
-#        run: npm run lint
-#
-#      - name: Test frontend
-#        working-directory: ./frontend
-#        run: npm test || true
-
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
+
+      - name: Upload frontend artifact
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-dist
+          path: frontend/dist
 
   deploy:
     name: Deploy to Server
     needs: build-and-test
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: backend-jar
+          path: artifacts
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: frontend-dist
+          path: artifacts
+
+      - name: List downloaded artifacts (debug)
+        run: |
+          echo "=== artifacts ==="
+          ls -la artifacts || true
+          echo "=== backend-jar ==="
+          ls -la artifacts/backend-jar || true
+          echo "=== frontend-dist ==="
+          ls -la artifacts/frontend-dist || true
 
       - name: Create directories on server
         uses: appleboy/ssh-action@v0.1.7
@@ -69,8 +97,9 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            mkdir -p ${{ secrets.DEPLOY_PATH }}/backend
-            mkdir -p ${{ secrets.DEPLOY_PATH }}/frontend
+            set -e
+            mkdir -p "${{ secrets.DEPLOY_PATH }}/backend"
+            mkdir -p "${{ secrets.DEPLOY_PATH }}/frontend"
 
       - name: Copy backend and frontend to server
         uses: appleboy/scp-action@v0.1.5
@@ -79,10 +108,10 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: backend/target/*.jar frontend/dist/**
+          source: artifacts/backend-jar/*.jar artifacts/frontend-dist/**
           target: ${{ secrets.DEPLOY_PATH }}
 
-      - name: Run backend on server
+      - name: Restart backend on server
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -90,11 +119,24 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            echo "Stopping existing backend..."
-            pkill -f backend.jar || true
-            echo "Starting backend..."
-            nohup java -jar ${{ secrets.DEPLOY_PATH }}/backend/backend.jar \
-              --spring.datasource.url=${{ secrets.SPRING_DATASOURCE_URL }} \
-              --spring.datasource.username=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
-              --spring.datasource.password=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
-              > ${{ secrets.DEPLOY_PATH }}/backend.log 2>&1 &
+            set -e
+            echo "Stopping existing backend process (if any)..."
+            pkill -f 'java -jar' || true
+
+            echo "Copying jar to backend folder..."
+            # move any uploaded jar(s) into backend folder (artifacts were copied to $DEPLOY_PATH)
+            # we assume scp copied them into $DEPLOY_PATH; if scp created subfolders, adjust paths accordingly.
+            # Find the jar that looks like your app and copy/rename to backend.jar
+            JAR=$(ls -t "${{ secrets.DEPLOY_PATH }}"/*.jar 2>/dev/null | head -n1 || true)
+            if [ -n "$JAR" ]; then
+              mv -f "$JAR" "${{ secrets.DEPLOY_PATH }}/backend/backend.jar" || cp -f "$JAR" "${{ secrets.DEPLOY_PATH }}/backend/backend.jar"
+            fi
+
+            echo "Starting backend (nohup)..."
+            nohup java -jar "${{ secrets.DEPLOY_PATH }}/backend/backend.jar" \
+              --spring.datasource.url="${{ secrets.SPRING_DATASOURCE_URL }}" \
+              --spring.datasource.username="${{ secrets.SPRING_DATASOURCE_USERNAME }}" \
+              --spring.datasource.password="${{ secrets.SPRING_DATASOURCE_PASSWORD }}" \
+              > "${{ secrets.DEPLOY_PATH }}/backend.log" 2>&1 &
+
+            echo "Backend started."
