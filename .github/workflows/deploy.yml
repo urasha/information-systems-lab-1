@@ -96,7 +96,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          source: "backend/*.jar"
+          source: "backend/*"
           target: "${{ secrets.DEPLOY_PATH }}/backend/upload"
 
       - name: Upload frontend dist to server
@@ -126,3 +126,4 @@ jobs:
               "${{ secrets.SPRING_DATASOURCE_URL }}" \
               "${{ secrets.SPRING_DATASOURCE_USERNAME }}" \
               "${{ secrets.SPRING_DATASOURCE_PASSWORD }}"
+  
