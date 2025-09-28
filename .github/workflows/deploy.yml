@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
+      SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+      SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+      SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
 
     steps:
       - name: Checkout repository
@@ -45,7 +48,7 @@ jobs:
 
       - name: Test frontend
         working-directory: ./frontend
-        run: npm test || true  # если тестов нет, игнорируем
+        run: npm test || true
 
       - name: Build frontend
         working-directory: ./frontend
@@ -59,7 +62,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Copy files to server
+      - name: Create directories on server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          script: |
+            mkdir -p ${{ secrets.DEPLOY_PATH }}/backend
+            mkdir -p ${{ secrets.DEPLOY_PATH }}/frontend
+
+      - name: Copy backend and frontend to server
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -82,4 +96,8 @@ jobs:
             echo "Stopping existing backend..."
             pkill -f backend.jar || true
             echo "Starting backend..."
-            nohup java -jar ${{ secrets.DEPLOY_PATH }}/backend.jar --spring.datasource.url=jdbc:postgresql://pg:5432/studs --spring.datasource.username=${{ secrets.DEPLOY_USER }} --spring.datasource.password=${{ secrets.DEPLOY_PASSWORD }} > ${{ secrets.DEPLOY_PATH }}/backend.log 2>&1 &
+            nohup java -jar ${{ secrets.DEPLOY_PATH }}/backend/backend.jar \
+              --spring.datasource.url=${{ secrets.SPRING_DATASOURCE_URL }} \
+              --spring.datasource.username=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
+              --spring.datasource.password=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
+              > ${{ secrets.DEPLOY_PATH }}/backend.log 2>&1 &
