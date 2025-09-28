@@ -48,9 +48,8 @@ public class StudyGroupService {
 
     @Transactional
     public StudyGroup update(Integer id, StudyGroupDto updatedGroupDto) throws StudyGroupNotFoundException {
-        String message = String.format(ExceptionMessages.STUDENT_GROUP_NOT_FOUND.getMessage(), id);
         StudyGroup existingGroup = repository.findById(id)
-                .orElseThrow(() -> new StudyGroupNotFoundException(message));
+                .orElseThrow(() -> new StudyGroupNotFoundException(id));
 
         studyGroupMapper.updateEntityFromDto(updatedGroupDto, existingGroup);
         StudyGroup saved = repository.save(existingGroup);

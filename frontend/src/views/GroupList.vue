@@ -3,6 +3,7 @@ import {computed, onMounted, onUnmounted, ref} from 'vue';
 import {api} from '../services/api';
 import CreateEditDialog from '../components/CreateEditDialog.vue';
 import GroupViewModal from "../components/GroupViewModal.vue";
+import SpecialOpsModal from '../components/SpecialOpsModal.vue'
 import {createWebSocket} from '../services/websocket';
 
 const groups = ref([]);
@@ -22,6 +23,8 @@ const popupCol = ref(null);
 const popupX = ref(0);
 const popupY = ref(0);
 
+const showSpecial = ref(false);
+
 const filters = ref({
   id: '',
   name: '',
@@ -35,7 +38,7 @@ const filters = ref({
   groupAdmin: ''
 });
 
-const activeFilter = ref(null); 
+const activeFilter = ref(null);
 
 const columns = ['id', 'name', 'studentsCount', 'expelledStudents', 'transferredStudents', 'shouldBeExpelled', 'averageMark', 'formOfEducation', 'semesterEnum', 'groupAdmin'];
 
@@ -196,7 +199,8 @@ function toggleFilter(col, event) {
           <button
               class="filter-btn"
               @click.stop="toggleFilter(col, $event)"
-          >🔍</button>
+          >🔍
+          </button>
         </th>
         <th>Actions</th>
       </tr>
@@ -240,6 +244,7 @@ function toggleFilter(col, event) {
     </div>
 
     <button class="create-btn" @click="openCreateDialog">Create New Group</button>
+    <button class="special-btn" @click="showSpecial = true">Special Ops</button>
 
     <CreateEditDialog
         v-if="showDialog"
@@ -252,6 +257,13 @@ function toggleFilter(col, event) {
         v-if="showViewDialog"
         :group="viewGroup"
         @close="showViewDialog = false"
+    />
+
+    <SpecialOpsModal
+        v-if="showSpecial"
+        :groups="groups"
+        @close="showSpecial = false"
+        @done="fetchGroups(); showSpecial=false"
     />
   </div>
 </template>
@@ -305,7 +317,7 @@ h1 {
   border: 1px solid #ccc;
   padding: 0.3rem;
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   z-index: 1000;
 }
 
@@ -372,6 +384,16 @@ button:disabled {
 
 .create-btn:hover {
   background-color: #45a049;
+}
+
+.special-btn {
+  background: #ff9800;
+  color: white;
+  margin-left: 8px;
+}
+
+.special-btn:hover {
+  background: #fb8c00;
 }
 
 .pagination {

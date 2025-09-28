@@ -28,7 +28,7 @@ public class StudyGroup {
     @NotNull
     private LocalDate creationDate;
 
-    @Min(1)
+    @Min(0)
     private int studentsCount;
 
     @Min(1)
