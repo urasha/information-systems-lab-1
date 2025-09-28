@@ -1,9 +1,6 @@
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5434/studs
-#    url: jdbc:postgresql://pg:5434/studs
-    username: studs
-    password: studs
+  config:
+    import: optional:file:../../.env
   jpa:
     hibernate:
       ddl-auto: update

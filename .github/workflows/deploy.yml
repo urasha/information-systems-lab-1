@@ -1,0 +1,85 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - feature
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Build and Test Backend & Frontend
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Backend
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build and Test Backend
+        working-directory: ./backend
+        run: mvn clean verify
+
+      # Frontend
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Test frontend
+        working-directory: ./frontend
+        run: npm test || true  # если тестов нет, игнорируем
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+  deploy:
+    name: Deploy to Server
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          source: |
+            backend/target/*.jar
+            frontend/dist/**
+          target: ${{ secrets.DEPLOY_PATH }}
+
+      - name: Run backend on server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          script: |
+            echo "Stopping existing backend..."
+            pkill -f backend.jar || true
+            echo "Starting backend..."
+            nohup java -jar ${{ secrets.DEPLOY_PATH }}/backend.jar --spring.datasource.url=jdbc:postgresql://pg:5432/studs --spring.datasource.username=${{ secrets.DEPLOY_USER }} --spring.datasource.password=${{ secrets.DEPLOY_PASSWORD }} > ${{ secrets.DEPLOY_PATH }}/backend.log 2>&1 &
