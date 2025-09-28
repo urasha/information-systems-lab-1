@@ -109,21 +109,21 @@ jobs:
           source: "frontend/*"
           target: "${{ secrets.DEPLOY_PATH }}/frontend/upload"
 
-      - name: Run deploy script on server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
-          script: |
-            set -e
-            echo "Running remote deploy script..."
-            chmod +x "${{ secrets.DEPLOY_PATH }}/deploy.sh" || true
-            "${{ secrets.DEPLOY_PATH }}/deploy.sh" \
-              "${{ secrets.DEPLOY_PATH }}/backend/upload" \
-              "${{ secrets.DEPLOY_PATH }}/frontend/upload" \
-              "${{ secrets.SPRING_DATASOURCE_URL }}" \
-              "${{ secrets.SPRING_DATASOURCE_USERNAME }}" \
-              "${{ secrets.SPRING_DATASOURCE_PASSWORD }}"
+#      - name: Run deploy script on server
+#        uses: appleboy/ssh-action@v1.2.0
+#        with:
+#          host: ${{ secrets.DEPLOY_HOST }}
+#          username: ${{ secrets.DEPLOY_USER }}
+#          key: ${{ secrets.DEPLOY_SSH_KEY }}
+#          port: ${{ secrets.DEPLOY_PORT }}
+#          script: |
+#            set -e
+#            echo "Running remote deploy script..."
+#            chmod +x "${{ secrets.DEPLOY_PATH }}/deploy.sh" || true
+#            "${{ secrets.DEPLOY_PATH }}/deploy.sh" \
+#              "${{ secrets.DEPLOY_PATH }}/backend/upload" \
+#              "${{ secrets.DEPLOY_PATH }}/frontend/upload" \
+#              "${{ secrets.SPRING_DATASOURCE_URL }}" \
+#              "${{ secrets.SPRING_DATASOURCE_USERNAME }}" \
+#              "${{ secrets.SPRING_DATASOURCE_PASSWORD }}"
   
