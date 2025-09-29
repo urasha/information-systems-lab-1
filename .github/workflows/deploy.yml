@@ -72,7 +72,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend_dist
-          path: dist  # Ключевое изменение - скачиваем в папку dist
+          path: dist
 
       - name: Show artifacts (debug)
         run: |
@@ -80,17 +80,6 @@ jobs:
           ls -la backend || true
           echo "Frontend artifact:"
           ls -la dist || true
-
-      - name: Cleanup remote public_html
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
-          script: |
-            rm -rf ${{ secrets.DEPLOY_PATH }}/../public_html/* || true
-            mkdir -p ${{ secrets.DEPLOY_PATH }}/../public_html
 
       - name: Upload backend jar to server
         uses: appleboy/scp-action@v0.1.7
@@ -102,12 +91,33 @@ jobs:
           source: "backend/*"
           target: "${{ secrets.DEPLOY_PATH }}/backend/upload"
 
-      - name: Upload frontend to server
+      - name: Upload frontend to temp folder
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          source: "dist/**"
-          target: "${{ secrets.DEPLOY_PATH }}/../public_html"
+          source: "dist/*"
+          target: "${{ secrets.DEPLOY_PATH }}/../public_html_temp"
+
+      - name: Move files to public_html and cleanup
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script: |
+            # Очищаем public_html
+            rm -rf ${{ secrets.DEPLOY_PATH }}/../public_html/*
+            
+            # Копируем все файлы из временной папки в public_html
+            cp -r ${{ secrets.DEPLOY_PATH }}/../public_html_temp/* ${{ secrets.DEPLOY_PATH }}/../public_html/
+            
+            # Удаляем временную папку
+            rm -rf ${{ secrets.DEPLOY_PATH }}/../public_html_temp
+            
+            # Проверяем результат
+            echo "Files in public_html:"
+            ls -la ${{ secrets.DEPLOY_PATH }}/../public_html/
