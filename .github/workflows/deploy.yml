@@ -72,14 +72,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend_dist
-          path: frontend
+          path: frontend_temp  # Изменили путь на временную папку
 
       - name: Show artifacts (debug)
         run: |
           echo "Backend artifact:"
           ls -la backend || true
           echo "Frontend artifact:"
-          ls -la frontend || true
+          ls -la frontend_temp || true
 
       - name: Upload backend jar to server
         uses: appleboy/scp-action@v0.1.7
@@ -98,5 +98,5 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          source: "frontend/*"
+          source: "frontend_temp/*"  # Загружаем содержимое временной папки
           target: "${{ secrets.DEPLOY_PATH }}/../public_html"
