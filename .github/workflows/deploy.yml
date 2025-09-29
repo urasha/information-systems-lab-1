@@ -109,5 +109,5 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          source: "frontend_final/*"
+          source: "frontend_final/**"
           target: "${{ secrets.DEPLOY_PATH }}/../public_html"
