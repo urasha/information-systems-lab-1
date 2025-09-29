@@ -83,6 +83,10 @@ jobs:
           echo "Contents of dist:"
           find dist -type f | head -10
 
+      - name: Create frontend archive
+        run: |
+          cd dist && tar -czf ../frontend.tar.gz .
+
       - name: Upload backend jar to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -93,7 +97,7 @@ jobs:
           source: "backend/*"
           target: "${{ secrets.DEPLOY_PATH }}/backend/upload"
 
-      - name: Deploy frontend via SSH script
+      - name: Clean public_html on server
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -101,33 +105,22 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
           script: |
-            # Очищаем public_html
             echo "Cleaning public_html..."
             rm -rf ${{ secrets.DEPLOY_PATH }}/../public_html/*
-            
-            # Создаем временную папку для загрузки
-            TEMP_DIR="/tmp/frontend_deploy_$$"
-            mkdir -p $TEMP_DIR
-            
-            # Убедимся, что папка создана
-            if [ ! -d "$TEMP_DIR" ]; then
-              echo "Failed to create temp directory"
-              exit 1
-            fi
-            
-            echo "Temp directory created: $TEMP_DIR"
+            mkdir -p ${{ secrets.DEPLOY_PATH }}/../public_html
+            echo "public_html cleaned"
 
-      - name: Upload frontend to temp directory
+      - name: Upload frontend archive to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          source: "dist/*"
-          target: "/tmp/frontend_deploy_$$"
+          source: "frontend.tar.gz"
+          target: "/tmp"
 
-      - name: Move files and cleanup
+      - name: Extract archive to public_html
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -135,24 +128,15 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
           script: |
-            TEMP_DIR="/tmp/frontend_deploy_$$"
+            echo "Extracting frontend files to public_html..."
+            tar -xzf /tmp/frontend.tar.gz -C ${{ secrets.DEPLOY_PATH }}/../public_html/
             
-            echo "Contents of temp directory:"
-            ls -la $TEMP_DIR/
+            echo "Cleaning up archive..."
+            rm -f /tmp/frontend.tar.gz
             
-            # Копируем ВСЕ содержимое временной папки в public_html
-            echo "Copying files to public_html..."
-            cp -r $TEMP_DIR/* ${{ secrets.DEPLOY_PATH }}/../public_html/ || {
-              echo "Failed to copy files"
-              # Попробуем альтернативный метод
-              cd $TEMP_DIR && cp -r . ${{ secrets.DEPLOY_PATH }}/../public_html/
-            }
+            echo "Setting permissions..."
+            chmod -R 755 ${{ secrets.DEPLOY_PATH }}/../public_html/
             
-            # Удаляем временную папку
-            echo "Cleaning up temp directory..."
-            rm -rf $TEMP_DIR
-            
-            # Проверяем результат
             echo "Final contents of public_html:"
             ls -la ${{ secrets.DEPLOY_PATH }}/../public_html/
             echo "Deployment completed successfully!"
