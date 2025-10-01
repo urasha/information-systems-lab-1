@@ -1,7 +1,7 @@
 import SockJS from 'sockjs-client';
 import {Client} from '@stomp/stompjs';
 
-const DEFAULT_WS_URL = "https://localhost:8081/ws";
+const DEFAULT_WS_URL = "http://localhost:8081/ws";
 
 export function createWebSocket(onMessage, opts = {}) {
     const url = opts.url || DEFAULT_WS_URL;
