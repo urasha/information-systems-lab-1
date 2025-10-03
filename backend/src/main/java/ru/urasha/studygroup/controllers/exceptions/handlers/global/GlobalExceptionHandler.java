@@ -41,7 +41,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<DefaultErrorResponseDto> handleAnyException(Exception exception) {
         DefaultErrorResponseDto body = new DefaultErrorResponseDto(
                 LocalDateTime.now(),
-                "Internal server error"
+                "Something went wrong"
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }

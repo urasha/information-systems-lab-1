@@ -1,5 +1,6 @@
 package ru.urasha.studygroup.repositories;
 
+import org.springframework.stereotype.Repository;
 import ru.urasha.studygroup.models.StudyGroup;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
+@Repository
 public interface StudyGroupRepository extends JpaRepository<StudyGroup, Integer> {
 
     Page<StudyGroup> findByNameContainingIgnoreCase(String name, Pageable pageable);
