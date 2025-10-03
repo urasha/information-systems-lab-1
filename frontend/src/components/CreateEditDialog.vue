@@ -1,5 +1,5 @@
 <script setup>
-import {ref, watch} from 'vue';
+import {ref, watch, onMounted, computed} from 'vue';
 import {api} from '../services/api';
 
 const props = defineProps({group: Object});
@@ -25,13 +25,67 @@ const localGroup = ref({
 
 const fieldErrors = ref({});
 
+const existingCoordinates = ref([]);
+const existingAdmins = ref([]);
+const selectedCoordinatesIndex = ref(-1);
+const selectedAdminIndex = ref(-1);
+
+const uniqueCoordinates = computed(() => {
+  const seen = new Set();
+  return existingCoordinates.value.filter(c => {
+    const key = `${c.x}_${c.y}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+});
+
+const uniqueAdmins = computed(() => {
+  const seen = new Set();
+  return existingAdmins.value.filter(a => {
+    const loc = a.location || {};
+    const key = `${a.name}_${a.eyeColor}_${a.hairColor}_${loc.x}_${loc.y}_${loc.z}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+});
+
 watch(() => props.group, g => {
   if (g) localGroup.value = {...localGroup.value, ...g};
 }, {immediate: true});
 
+onMounted(async () => {
+  try {
+    const coordsRes = await api.get('/coordinates');
+    existingCoordinates.value = coordsRes.data || [];
+
+    const adminsRes = await api.get('/persons');
+    existingAdmins.value = adminsRes.data || [];
+  } catch (err) {
+    console.error('Failed to load existing objects');
+  }
+});
+
 async function save() {
   try {
     fieldErrors.value = {};
+
+    if (selectedCoordinatesIndex.value >= 0) {
+      const coord = existingCoordinates.value[selectedCoordinatesIndex.value];
+      localGroup.value.coordinates = {x: coord.x, y: coord.y};
+    }
+
+    if (selectedAdminIndex.value >= 0) {
+      const admin = existingAdmins.value[selectedAdminIndex.value];
+      localGroup.value.groupAdmin = {
+        name: admin.name,
+        eyeColor: admin.eyeColor,
+        hairColor: admin.hairColor,
+        location: { x: admin.location.x, y: admin.location.y, z: admin.location.z }
+      };
+    }
+
     if (localGroup.value.id) {
       await api.put(`/groups/${localGroup.value.id}`, localGroup.value);
     } else {
@@ -41,7 +95,6 @@ async function save() {
     emit('close');
   } catch (err) {
     console.error(err);
-
     if (err.response?.status === 400 && err.response?.data?.fieldErrors) {
       fieldErrors.value = err.response.data.fieldErrors;
     } else {
@@ -102,22 +155,36 @@ async function save() {
 
       <div class="form-section">
         <h3 class="section-title">Coordinates</h3>
-        <label>X:</label>
-        <input type="number" step="0.1" v-model.number="localGroup.coordinates.x" placeholder="X"/>
+        <label>Select existing:</label>
+        <select v-model="selectedCoordinatesIndex">
+          <option :value="-1">Create new</option>
+          <option v-for="(coord, index) in uniqueCoordinates" :key="index" :value="index">
+            X: {{coord.x}}, Y: {{coord.y}}
+          </option>
+        </select>
 
+        <label>X:</label>
+        <input type="number" step="0.1" v-model.number="localGroup.coordinates.x" :disabled="selectedCoordinatesIndex >= 0"/>
         <label>Y:</label>
-        <input type="number" v-model.number="localGroup.coordinates.y" placeholder="Y"/>
+        <input type="number" v-model.number="localGroup.coordinates.y" :disabled="selectedCoordinatesIndex >= 0"/>
       </div>
 
       <div class="form-section">
         <h3 class="section-title">Admin</h3>
+        <label>Select existing:</label>
+        <select v-model="selectedAdminIndex">
+          <option :value="-1">Create new</option>
+          <option v-for="(admin, index) in uniqueAdmins" :key="index" :value="index">
+            {{admin.name}} ({{admin.eyeColor}}, {{admin.hairColor}})
+          </option>
+        </select>
 
         <label>Admin Name:</label>
-        <input v-model="localGroup.groupAdmin.name" placeholder="Admin Name"/>
+        <input v-model="localGroup.groupAdmin.name" :disabled="selectedAdminIndex >= 0"/>
         <span class="error" v-if="fieldErrors['groupAdmin.name']">{{ fieldErrors['groupAdmin.name'] }}</span>
 
         <label>Eye Color:</label>
-        <select v-model="localGroup.groupAdmin.eyeColor">
+        <select v-model="localGroup.groupAdmin.eyeColor" :disabled="selectedAdminIndex >= 0">
           <option value="BLACK">BLACK</option>
           <option value="BLUE">BLUE</option>
           <option value="WHITE">WHITE</option>
@@ -125,7 +192,7 @@ async function save() {
         </select>
 
         <label>Hair Color:</label>
-        <select v-model="localGroup.groupAdmin.hairColor">
+        <select v-model="localGroup.groupAdmin.hairColor" :disabled="selectedAdminIndex >= 0">
           <option value="BLACK">BLACK</option>
           <option value="BLUE">BLUE</option>
           <option value="WHITE">WHITE</option>
@@ -134,13 +201,11 @@ async function save() {
 
         <h4 class="section-title">Admin Location</h4>
         <label>X:</label>
-        <input type="number" step="0.1" v-model.number="localGroup.groupAdmin.location.x" placeholder="X"/>
-
+        <input type="number" step="0.1" v-model.number="localGroup.groupAdmin.location.x" :disabled="selectedAdminIndex >= 0"/>
         <label>Y:</label>
-        <input type="number" v-model.number="localGroup.groupAdmin.location.y" placeholder="Y"/>
-
+        <input type="number" v-model.number="localGroup.groupAdmin.location.y" :disabled="selectedAdminIndex >= 0"/>
         <label>Z:</label>
-        <input type="number" step="0.1" v-model.number="localGroup.groupAdmin.location.z" placeholder="Z"/>
+        <input type="number" step="0.1" v-model.number="localGroup.groupAdmin.location.z" :disabled="selectedAdminIndex >= 0"/>
       </div>
 
       <div class="modal-actions">
