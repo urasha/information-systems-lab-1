@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.urasha.studygroup.dto.StudyGroupDto;
 import ru.urasha.studygroup.events.StudyGroupChangedEvent;
-import ru.urasha.studygroup.exceptions.ExceptionMessages;
 import ru.urasha.studygroup.exceptions.StudyGroupNotFoundException;
 import ru.urasha.studygroup.mappers.StudyGroupMapper;
 import ru.urasha.studygroup.models.StudyGroup;
