@@ -45,6 +45,8 @@ const emit = defineEmits(['close']);
           <dt>Name:</dt><dd>{{ group.groupAdmin?.name || '—' }}</dd>
           <dt>Eye Color:</dt><dd>{{ group.groupAdmin?.eyeColor }}</dd>
           <dt>Hair Color:</dt><dd>{{ group.groupAdmin?.hairColor }}</dd>
+          <dt>Passport ID:</dt><dd>{{ group.groupAdmin?.passportID || '—' }}</dd>
+          <dt>Nationality:</dt><dd>{{ group.groupAdmin?.nationality || '—' }}</dd>
         </dl>
 
         <h4>Location</h4>

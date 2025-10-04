@@ -199,6 +199,19 @@ async function save() {
           <option value="BROWN">BROWN</option>
         </select>
 
+        <label>Passport ID:</label>
+        <input v-model="localGroup.groupAdmin.passportID" :disabled="selectedAdminIndex >= 0"/>
+        <span class="error" v-if="fieldErrors['groupAdmin.passportID']">{{ fieldErrors['groupAdmin.passportID'] }}</span>
+
+        <label>Nationality:</label>
+        <select v-model="localGroup.groupAdmin.nationality" :disabled="selectedAdminIndex >= 0">
+          <option :value="null">—</option>
+          <option value="USA">USA</option>
+          <option value="GERMANY">FRANCE</option>
+          <option value="ITALY">ITALY</option>
+          <option value="FRANCE">FRANCE</option>
+        </select>
+
         <h4 class="section-title">Admin Location</h4>
         <label>X:</label>
         <input type="number" step="0.1" v-model.number="localGroup.groupAdmin.location.x" :disabled="selectedAdminIndex >= 0"/>
