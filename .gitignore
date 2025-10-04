@@ -3,11 +3,12 @@
 !/backend/
 !/frontend/
 !/docs/
+!/.github/
 
 !/backend/** 
 !/frontend/**
 !/docs/**
+!/.github/**
 
 !/README.md
 !/LICENSE
-!/docker-compose.yml

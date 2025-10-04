@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.urasha.studygroup.dto.StudyGroupDto;
 import ru.urasha.studygroup.events.StudyGroupChangedEvent;
-import ru.urasha.studygroup.exceptions.ExceptionMessages;
 import ru.urasha.studygroup.exceptions.StudyGroupNotFoundException;
 import ru.urasha.studygroup.mappers.StudyGroupMapper;
 import ru.urasha.studygroup.models.StudyGroup;
@@ -24,7 +23,7 @@ public class StudyGroupService {
     private final StudyGroupMapper studyGroupMapper;
     private final ApplicationEventPublisher eventPublisher;
 
-    public Page<StudyGroup> list(String nameContains, Pageable pageable) {
+    public Page<StudyGroup> getGroupPage(String nameContains, Pageable pageable) {
         return nameContains == null || nameContains.isBlank()
                 ? repository.findAll(pageable)
                 : repository.findByNameContainingIgnoreCase(nameContains, pageable);
@@ -47,10 +46,9 @@ public class StudyGroupService {
     }
 
     @Transactional
-    public StudyGroup update(Integer id, StudyGroupDto updatedGroupDto) {
-        String message = String.format(ExceptionMessages.STUDENT_GROUP_NOT_FOUND.getMessage(), id);
+    public StudyGroup update(Integer id, StudyGroupDto updatedGroupDto) throws StudyGroupNotFoundException {
         StudyGroup existingGroup = repository.findById(id)
-                .orElseThrow(() -> new StudyGroupNotFoundException(message));
+                .orElseThrow(() -> new StudyGroupNotFoundException(id));
 
         studyGroupMapper.updateEntityFromDto(updatedGroupDto, existingGroup);
         StudyGroup saved = repository.save(existingGroup);

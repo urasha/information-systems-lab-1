@@ -1,19 +1,46 @@
 <script setup>
-import {ref, onMounted, onUnmounted} from 'vue';
+import {computed, onMounted, onUnmounted, ref} from 'vue';
 import {api} from '../services/api';
 import CreateEditDialog from '../components/CreateEditDialog.vue';
+import GroupViewModal from "../components/GroupViewModal.vue";
+import SpecialOpsModal from '../components/SpecialOpsModal.vue'
 import {createWebSocket} from '../services/websocket';
 
 const groups = ref([]);
 const page = ref(0);
 const pageSize = 10;
-const filterName = ref('');
 const sortField = ref('id');
 const sortAsc = ref(true);
 const showDialog = ref(false);
 const selectedGroup = ref(null);
 
+const showViewDialog = ref(false);
+const viewGroup = ref(null);
 const totalPages = ref(1);
+
+const popupVisible = ref(false);
+const popupCol = ref(null);
+const popupX = ref(0);
+const popupY = ref(0);
+
+const showSpecial = ref(false);
+
+const filters = ref({
+  id: '',
+  name: '',
+  studentsCount: '',
+  expelledStudents: '',
+  transferredStudents: '',
+  shouldBeExpelled: '',
+  averageMark: '',
+  formOfEducation: '',
+  semesterEnum: '',
+  groupAdmin: ''
+});
+
+const activeFilter = ref(null);
+
+const columns = ['id', 'name', 'studentsCount', 'expelledStudents', 'transferredStudents', 'shouldBeExpelled', 'averageMark', 'formOfEducation', 'semesterEnum', 'groupAdmin'];
 
 let stompClient = null;
 let debounceTimer = null;
@@ -24,20 +51,15 @@ async function fetchGroups() {
       params: {
         page: page.value,
         size: pageSize,
-        nameContains: filterName.value || undefined,
         sort: sortField.value,
         asc: sortAsc.value
       }
     });
-
     const payload = res.data;
     if (payload && Array.isArray(payload.content)) {
       groups.value = payload.content;
       totalPages.value = payload.totalPages ?? 1;
-
-      if (typeof payload.number === 'number') {
-        page.value = payload.number;
-      }
+      if (typeof payload.number === 'number') page.value = payload.number;
     } else if (Array.isArray(payload)) {
       groups.value = payload;
       totalPages.value = Math.ceil(groups.value.length / pageSize) || 1;
@@ -45,8 +67,6 @@ async function fetchGroups() {
       groups.value = payload.content ?? [];
       totalPages.value = payload.totalPages ?? 1;
     }
-
-    console.debug('Groups loaded', groups.value);
   } catch (err) {
     console.error('Failed to fetch groups', err);
   }
@@ -89,6 +109,11 @@ function closeDialog() {
   showDialog.value = false;
 }
 
+function viewGroupDetails(group) {
+  viewGroup.value = group;
+  showViewDialog.value = true;
+}
+
 async function deleteGroup(id) {
   try {
     await api.delete(`/groups/${id}`);
@@ -101,94 +126,125 @@ async function deleteGroup(id) {
 
 function handleWsMessage(payload) {
   if (!payload || !payload.event) return;
-
-  switch (payload.event) {
-    case 'created':
-    case 'updated':
-    case 'deleted':
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      debounceTimer = setTimeout(() => {
-        fetchGroups();
-        debounceTimer = null;
-      }, 250);
-      break;
-
-    default:
-      console.warn('Unknown WS event', payload);
+  if (['created', 'updated', 'deleted'].includes(payload.event)) {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      fetchGroups();
+      debounceTimer = null;
+    }, 250);
   }
 }
 
 onMounted(() => {
   fetchGroups();
-
-  stompClient = createWebSocket((payload) => {
-    handleWsMessage(payload);
-  });
+  stompClient = createWebSocket(handleWsMessage);
 });
 
 onUnmounted(() => {
-  if (stompClient && typeof stompClient.deactivate === 'function') {
-    stompClient.deactivate();
-    stompClient = null;
-  }
+  if (stompClient?.deactivate) stompClient.deactivate();
 });
 
-function onFilterInput() {
-  if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    page.value = 0;
-    fetchGroups();
-    debounceTimer = null;
-  }, 300);
-}
+const filteredGroups = computed(() => {
+  return groups.value.filter(g => {
+    return Object.entries(filters.value).every(([col, val]) => {
+      if (!val) return true;
+      let field = g[col];
+      if (col === 'groupAdmin') field = g.groupAdmin?.name || '';
+      if (field === null || field === undefined) field = '';
+      return String(field).toLowerCase().includes(val.toLowerCase());
+    });
+  });
+});
 
 function onSaved() {
   showDialog.value = false;
   fetchGroups();
 }
+
+function toggleFilter(col, event) {
+  if (popupVisible.value && popupCol.value === col) {
+    popupVisible.value = false;
+    popupCol.value = null;
+  } else {
+    popupCol.value = col;
+    const rect = event.target.getBoundingClientRect();
+    popupX.value = rect.right + window.scrollX;
+    popupY.value = rect.bottom + window.scrollY;
+    popupVisible.value = true;
+  }
+}
 </script>
 
 <template>
-  <div>
+  <div class="container">
     <h1>Study Groups</h1>
-    <input v-model="filterName" placeholder="Filter by name..." @input="onFilterInput"/>
 
-    <table>
+    <div
+        v-if="popupVisible"
+        class="filter-popup"
+        :style="{ top: popupY + 'px', left: popupX + 'px' }"
+    >
+      <input
+          v-model="filters[popupCol]"
+          placeholder="Type to filter..."
+          class="filter-input"
+      />
+    </div>
+
+    <table class="group-table">
       <thead>
       <tr>
-        <th @click="sortBy('id')">ID</th>
-        <th @click="sortBy('name')">Name</th>
-        <th>Students Count</th>
-        <th>Admin</th>
+        <th v-for="col in columns" :key="col" @click="sortBy(col)">
+          {{ col }}
+          <button
+              class="filter-btn"
+              @click.stop="toggleFilter(col, $event)"
+          >🔍
+          </button>
+        </th>
         <th>Actions</th>
+      </tr>
+      <tr v-if="activeFilter">
+        <th v-for="col in columns" :key="col">
+          <input v-if="activeFilter === col"
+                 v-model="filters[col]"
+                 placeholder="Type to filter..."
+                 class="filter-input">
+        </th>
+        <th></th>
       </tr>
       </thead>
       <tbody>
-      <tr v-for="group in groups" :key="group.id">
+      <tr v-for="group in filteredGroups" :key="group.id">
         <td>{{ group.id }}</td>
         <td>{{ group.name }}</td>
         <td>{{ group.studentsCount }}</td>
+        <td>{{ group.expelledStudents }}</td>
+        <td>{{ group.transferredStudents }}</td>
+        <td>{{ group.shouldBeExpelled }}</td>
+        <td>{{ group.averageMark }}</td>
+        <td>{{ group.formOfEducation || '—' }}</td>
+        <td>{{ group.semesterEnum }}</td>
         <td>{{ group.groupAdmin?.name || '—' }}</td>
         <td>
-          <button @click="editGroup(group)">Edit</button>
-          <button @click="deleteGroup(group.id)">Delete</button>
+          <div class="action-buttons">
+            <button class="view-btn" @click="viewGroupDetails(group)">View</button>
+            <button class="edit-btn" @click="editGroup(group)">Edit</button>
+            <button class="delete-btn" @click="deleteGroup(group.id)">Delete</button>
+          </div>
         </td>
       </tr>
       </tbody>
     </table>
 
-    <div style="margin-top: 0.5rem;">
+    <div class="pagination">
       <button @click="prevPage" :disabled="page===0">Prev</button>
-      <span style="margin:0 1rem;">Page {{ page + 1 }} / {{ totalPages }}</span>
+      <span>Page {{ page + 1 }} / {{ totalPages }}</span>
       <button @click="nextPage" :disabled="page + 1 >= totalPages">Next</button>
     </div>
 
-    <div style="margin-top: 1rem;">
-      <button @click="openCreateDialog">Create New Group</button>
-    </div>
+    <button class="create-btn" @click="openCreateDialog">Create New Group</button>
+    <button class="special-btn" @click="showSpecial = true">Special Ops</button>
 
     <CreateEditDialog
         v-if="showDialog"
@@ -196,5 +252,154 @@ function onSaved() {
         @close="closeDialog"
         @saved="onSaved"
     />
+
+    <GroupViewModal
+        v-if="showViewDialog"
+        :group="viewGroup"
+        @close="showViewDialog = false"
+    />
+
+    <SpecialOpsModal
+        v-if="showSpecial"
+        :groups="groups"
+        @close="showSpecial = false"
+        @done="fetchGroups(); showSpecial=false"
+    />
   </div>
 </template>
+
+<style scoped>
+.container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 1rem;
+  max-width: 1200px;
+}
+
+h1 {
+  margin-bottom: 1rem;
+}
+
+.group-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 0.9rem;
+}
+
+.group-table th, .group-table td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.group-table thead th {
+  background-color: #f0f0f0;
+  cursor: pointer;
+  position: relative;
+}
+
+.group-table tbody tr:hover {
+  background-color: #f5faff;
+}
+
+.filter-btn {
+  margin-left: 0.3rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.filter-popup {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 0.3rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 0.25rem;
+  font-size: 0.85rem;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+button {
+  border: none;
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.view-btn {
+  background-color: #9c27b0;
+  color: white;
+}
+
+.view-btn:hover {
+  background-color: #7b1fa2;
+}
+
+.edit-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #1976d2;
+}
+
+.delete-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #d32f2f;
+}
+
+.create-btn {
+  background-color: #4CAF50;
+  color: white;
+  margin-top: 0.5rem;
+}
+
+.create-btn:hover {
+  background-color: #45a049;
+}
+
+.special-btn {
+  background: #ff9800;
+  color: white;
+  margin-left: 8px;
+}
+
+.special-btn:hover {
+  background: #fb8c00;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+</style>

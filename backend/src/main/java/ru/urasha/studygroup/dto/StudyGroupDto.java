@@ -1,5 +1,6 @@
 package ru.urasha.studygroup.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import ru.urasha.studygroup.models.*;
@@ -11,10 +12,11 @@ public class StudyGroupDto {
     private String name;
 
     @NotNull
+    @Valid
     private Coordinates coordinates;
 
-    @Min(1)
-    private int studentsCount = 1;
+    @Min(0)
+    private int studentsCount = 0;
 
     @Min(1)
     private long expelledStudents = 1;
@@ -35,5 +37,6 @@ public class StudyGroupDto {
     private Semester semesterEnum;
 
     @NotNull
+    @Valid
     private Person groupAdmin;
 }
