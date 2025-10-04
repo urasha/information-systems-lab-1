@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.urasha.studygroup.models.Person;
-import ru.urasha.studygroup.repositories.PersonRepository;
+import ru.urasha.studygroup.services.PersonService;
 
 import java.util.List;
 
@@ -15,10 +15,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PersonController {
 
-    private final PersonRepository personRepository;
+    private final PersonService personService;
 
     @GetMapping
     public ResponseEntity<List<Person>> getAllPersons() {
-        return ResponseEntity.ok().body(personRepository.findAll());
+        return ResponseEntity.ok().body(personService.getAll());
     }
 }
