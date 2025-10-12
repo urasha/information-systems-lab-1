@@ -1,5 +1,6 @@
 import axios from 'axios';
+import config from "../config/index.js";
 
 export const api = axios.create({
-  baseURL: "http://localhost:8081/api"
+  baseURL: config.api.baseURL
 });
