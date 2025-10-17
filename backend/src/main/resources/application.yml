@@ -1,12 +1,16 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5434/studs
-#    url: jdbc:postgresql://pg:5434/studs
-    username: studs
-    password: studs
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+  messages:
+    basename: messages
+  web:
+    locale: en
+    locale-resolver: fixed
 server:
-  port: 8080
+  port: 8081
