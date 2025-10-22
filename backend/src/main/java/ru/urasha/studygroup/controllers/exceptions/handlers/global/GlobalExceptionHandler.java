@@ -15,14 +15,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(StudyGroupException.class)
-    public ResponseEntity<DefaultErrorResponseDto> handleStudyGroupException(StudyGroupException exception) {
-        DefaultErrorResponseDto body = new DefaultErrorResponseDto(
-                LocalDateTime.now(),
-                exception.getMessage()
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
-    }
+
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
@@ -35,14 +28,5 @@ public class GlobalExceptionHandler {
                 "fieldErrors", fieldErrors
         );
         return ResponseEntity.badRequest().body(body);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<DefaultErrorResponseDto> handleAnyException(Exception exception) {
-        DefaultErrorResponseDto body = new DefaultErrorResponseDto(
-                LocalDateTime.now(),
-                "Something went wrong"
-        );
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
