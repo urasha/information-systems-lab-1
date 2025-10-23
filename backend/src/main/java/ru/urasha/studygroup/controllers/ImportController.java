@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.urasha.studygroup.dto.ImportResultDto;
-import ru.urasha.studygroup.services.ImportService;
+import ru.urasha.studygroup.services.importing.ImportService;
 
 @RestController
 @RequestMapping("/api/groups")
