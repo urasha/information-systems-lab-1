@@ -55,7 +55,10 @@ public class UniqueConstraintService {
                     .filter(g -> g.getName() != null && g.getName().equalsIgnoreCase(dto.getName()))
                     .filter(g -> !g.getId().equals(id))
                     .findFirst();
-            if (byName.isPresent()) errors.add(new ImportErrorDto(-1, "name", "Group name must be unique"));
+
+            if (byName.isPresent()) {
+                errors.add(new ImportErrorDto(-1, "name", "Group name must be unique"));
+            }
         }
 
         if (dto.getCoordinates() != null) {
