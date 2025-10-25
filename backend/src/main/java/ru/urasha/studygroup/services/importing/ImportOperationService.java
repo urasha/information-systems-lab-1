@@ -9,7 +9,6 @@ import ru.urasha.studygroup.models.importing.ImportStatus;
 import ru.urasha.studygroup.repositories.ImportOperationRepository;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -19,42 +18,33 @@ public class ImportOperationService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ImportOperation createRunningOperation(String username, String role) {
-        ImportOperation importOperation = new ImportOperation();
-        importOperation.setStatus(ImportStatus.RUNNING);
-        importOperation.setUsername(username);
-        importOperation.setRole(role);
-        importOperation.setCreatedAt(LocalDateTime.now());
+        ImportOperation importOperation = ImportOperation.builder()
+                .status(ImportStatus.RUNNING)
+                .username(username)
+                .role(role)
+                .createdAt(LocalDateTime.now())
+                .build();
 
         return repository.save(importOperation);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markCompleted(Long operationId, int importedCount) {
-        Optional<ImportOperation> optionalImportOperation = repository.findById(operationId);
-        if (optionalImportOperation.isEmpty()) {
-            return;
-        }
-
-        ImportOperation importOperation = optionalImportOperation.get();
-        importOperation.setStatus(ImportStatus.COMPLETED);
-        importOperation.setImportedCount(importedCount);
-        importOperation.setFinishedAt(LocalDateTime.now());
-
-        repository.save(importOperation);
+        repository.findById(operationId).ifPresent(importOperation -> {
+            importOperation.setStatus(ImportStatus.COMPLETED);
+            importOperation.setImportedCount(importedCount);
+            importOperation.setFinishedAt(LocalDateTime.now());
+            repository.save(importOperation);
+        });
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long operationId, String shortErrorMessage) {
-        Optional<ImportOperation> optionalImportOperation = repository.findById(operationId);
-        if (optionalImportOperation.isEmpty()) {
-            return;
-        }
-
-        ImportOperation importOperation = optionalImportOperation.get();
-        importOperation.setStatus(ImportStatus.FAILED);
-        importOperation.setErrorMessage(shortErrorMessage);
-        importOperation.setFinishedAt(LocalDateTime.now());
-
-        repository.save(importOperation);
+        repository.findById(operationId).ifPresent(importOperation -> {
+            importOperation.setStatus(ImportStatus.FAILED);
+            importOperation.setErrorMessage(shortErrorMessage);
+            importOperation.setFinishedAt(LocalDateTime.now());
+            repository.save(importOperation);
+        });
     }
 }

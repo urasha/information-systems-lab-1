@@ -1,10 +1,7 @@
 package ru.urasha.studygroup.models.importing;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Getter
@@ -12,6 +9,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "import_operation")
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ImportOperation {
 
     @Id
