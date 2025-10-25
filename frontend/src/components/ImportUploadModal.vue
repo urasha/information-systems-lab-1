@@ -32,31 +32,60 @@ async function upload() {
   const fd = new FormData();
   fd.append('file', selectedFile.value);
 
+  const localUser = (() => {
+    try {
+      return localStorage.getItem('app.user');
+    } catch {
+      return null;
+    }
+  })();
+  const localRole = (() => {
+    try {
+      return localStorage.getItem('app.role');
+    } catch {
+      return null;
+    }
+  })();
+
+  const headerUser = localUser && localUser.trim() !== '' ? localUser : (props.currentUser || 'anonymous');
+  const headerRole = localRole && localRole.trim() !== '' ? localRole : (props.currentRole || 'USER');
+
   uploading.value = true;
   try {
     const res = await api.post('/groups/import', fd, {
       headers: {
-        'X-User': props.currentUser,
-        'X-Role': props.currentRole
+        'X-User': headerUser,
+        'X-Role': headerRole
       },
       timeout: 120000
     });
+
     result.value = res.data;
     emit('done', result.value);
   } catch (err) {
     if (err.response?.data) {
       const data = err.response.data;
+
       if (Array.isArray(data.errors)) {
         uploadError.value = data.errors.map(e =>
-            `#${e.index >= 0 ? e.index : '?'} ${e.field}: ${e.message}`
+            `#${(typeof e.index === 'number' && e.index >= 0) ? e.index : '?'} ${e.field}: ${e.message}`
         ).join('\n');
+      } else if (Array.isArray(data)) {
+        uploadError.value = data.map(e => {
+          if (e && typeof e === 'object') return `#${e.index ?? '?'} ${e.field ?? 'file'}: ${e.message ?? JSON.stringify(e)}`;
+          return String(e);
+        }).join('\n');
       } else if (data.message) {
         uploadError.value = data.message;
       } else {
-        uploadError.value = JSON.stringify(data);
+        try {
+          uploadError.value = JSON.stringify(data);
+        } catch {
+          uploadError.value = String(data);
+        }
       }
     } else {
-      uploadError.value = err.message;
+      uploadError.value = err.message || 'Unknown error';
     }
   } finally {
     uploading.value = false;
