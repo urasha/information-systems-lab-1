@@ -92,16 +92,16 @@ public class ImportService {
             ));
         } catch (JsonMappingException jme) {
             ImportErrorDto err = JsonErrorParser.fromJsonMappingException(jme);
-            log.warn("JSON mapping error in file '{}': field='{}', record={}",
-                    filename, err.field(), err.index());
+            log.warn("JSON mapping error in file '{}': {} (field={}, index={})",
+                    filename, jme.getOriginalMessage(), err.field(), err.index());
             throw new ImportException(Collections.singletonList(err));
         } catch (JsonProcessingException jpe) {
-            log.error("JSON processing error in file '{}': {}", filename, jpe.getOriginalMessage());
+            log.warn("JSON processing error in file '{}': {}", filename, jpe.getOriginalMessage());
             throw new ImportException(Collections.singletonList(
                     new ImportErrorDto(-1, "file", "Invalid JSON format")
             ));
         } catch (IOException ioe) {
-            log.error("IO error while reading file '{}': {}", filename, ioe.getMessage());
+            log.warn("IO error while reading file '{}': {}", filename, ioe.getMessage());
             throw new ImportException(Collections.singletonList(
                     new ImportErrorDto(-1, "file", "Cannot read file")
             ));

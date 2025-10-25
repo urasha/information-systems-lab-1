@@ -1,13 +1,14 @@
 package ru.urasha.studygroup.util;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.core.JsonLocation;
 import ru.urasha.studygroup.dto.ImportErrorDto;
 
 import java.util.List;
 
 public final class JsonErrorParser {
 
-    private JsonErrorParser() {  }
+    private JsonErrorParser() { }
 
     public static ImportErrorDto fromJsonMappingException(JsonMappingException jme) {
         List<JsonMappingException.Reference> path = jme.getPath();
@@ -26,8 +27,18 @@ public final class JsonErrorParser {
 
         String fieldPath = fieldBuilder.isEmpty() ? "file" : fieldBuilder.toString();
 
-        String message = "Invalid value for field '" + fieldPath + "'";
+        if ("file".equals(fieldPath)) {
+            JsonLocation loc = jme.getLocation();
+            if (loc != null && loc.getLineNr() >= 0) {
+                String msg = String.format("Invalid JSON near line %d, column %d",
+                        loc.getLineNr(), loc.getColumnNr());
+                return new ImportErrorDto(recordIndex, "file", msg);
+            } else {
+                return new ImportErrorDto(recordIndex, "file", "Invalid JSON structure or value");
+            }
+        }
 
+        String message = "Invalid value for field '" + fieldPath + "'";
         return new ImportErrorDto(recordIndex, fieldPath, message);
     }
 }
