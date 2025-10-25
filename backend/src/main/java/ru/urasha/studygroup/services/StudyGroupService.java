@@ -22,6 +22,7 @@ public class StudyGroupService {
     private final StudyGroupRepository repository;
     private final StudyGroupMapper studyGroupMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final UniqueConstraintService uniqueConstraintService;
 
     public Page<StudyGroup> getGroupPage(String nameContains, Pageable pageable) {
         return nameContains == null || nameContains.isBlank()
@@ -35,6 +36,8 @@ public class StudyGroupService {
 
     @Transactional
     public StudyGroup create(StudyGroupDto dto) {
+        uniqueConstraintService.checkUniqueForCreate(dto);
+
         StudyGroup group = studyGroupMapper.toEntity(dto);
         StudyGroup saved = repository.save(group);
 
@@ -49,6 +52,8 @@ public class StudyGroupService {
     public StudyGroup update(Integer id, StudyGroupDto updatedGroupDto) throws StudyGroupNotFoundException {
         StudyGroup existingGroup = repository.findById(id)
                 .orElseThrow(() -> new StudyGroupNotFoundException(id));
+
+        uniqueConstraintService.checkUniqueForUpdate(id, updatedGroupDto);
 
         studyGroupMapper.updateEntityFromDto(updatedGroupDto, existingGroup);
         StudyGroup saved = repository.save(existingGroup);
